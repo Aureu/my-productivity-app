@@ -97,8 +97,8 @@ export function deleteTask(id) {
 	return deletedTask;
 }
 
-export function findProjectById(id) {
-	return projects.find((project) => project.id === parseInt(id));
+export function findProjectById(projectId) {
+	return projects.find((project) => project.id === projectId);
 }
 
 export function addProject(projectData) {
@@ -108,4 +108,36 @@ export function addProject(projectData) {
 	};
 	projects.push(newProject);
 	return newProject;
+}
+
+// Helper function to update a project
+export function updateProject(projectId, projectData) {
+	const projectIndex = projects.findIndex(
+		(project) => project.id === projectId
+	);
+	if (projectIndex === -1) {
+		return null;
+	}
+
+	projects[projectIndex] = {
+		...projects[projectIndex],
+		...projectData,
+		id: projectId, // Ensure ID doesn't change
+	};
+
+	return projects[projectIndex];
+}
+
+// Helper function to delete a project
+export function deleteProject(projectId) {
+	const projectIndex = projects.findIndex(
+		(project) => project.id === projectId
+	);
+	if (projectIndex === -1) {
+		return null;
+	}
+
+	const deletedProject = projects[projectIndex];
+	projects.splice(projectIndex, 1);
+	return deletedProject;
 }

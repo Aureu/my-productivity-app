@@ -166,20 +166,73 @@ export default function HomePage() {
 		try {
 			const response = await fetch('/api/projects', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ name }),
 			});
 
 			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				throw new Error('Failed to create project');
 			}
 
-			fetchProjects(); // Refetch all projects
-		} catch (e) {
-			console.error('Failed to create project:', e);
-			setError(e instanceof Error ? e.message : 'Unknown error occurred');
+			const newProject = await response.json();
+			setProjects([...projects, newProject]);
+		} catch (error) {
+			console.error('Error creating project:', error);
+			setError('Failed to create project');
+		}
+	};
+
+	const handleUpdateProject = async (projectId: number, name: string) => {
+		try {
+			const response = await fetch(`/api/projects/${projectId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name }),
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to update project');
+			}
+
+			const updatedProject = await response.json();
+			setProjects(
+				projects.map((p) => (p.id === projectId ? updatedProject : p))
+			);
+		} catch (error) {
+			console.error('Error updating project:', error);
+			setError('Failed to update project');
+		}
+	};
+
+	const handleDeleteProject = async (
+		projectId: number,
+		handleTasks: 'delete' | 'unassign'
+	) => {
+		try {
+			const response = await fetch(
+				`/api/projects/${projectId}?handleTasks=${handleTasks}`,
+				{
+					method: 'DELETE',
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error('Failed to delete project');
+			}
+
+			// Remove project from state
+			setProjects(projects.filter((p) => p.id !== projectId));
+
+			// If we were filtering by this project, reset to show all tasks
+			if (selectedProjectId === projectId) {
+				setSelectedProjectId(null);
+			}
+
+			// Refresh tasks to reflect any changes (deleted or unassigned tasks)
+			await fetchTasks();
+		} catch (error) {
+			console.error('Error deleting project:', error);
+			setError('Failed to delete project');
 		}
 	};
 
@@ -282,9 +335,12 @@ export default function HomePage() {
 				<div className='mb-8'>
 					<ProjectList
 						projects={projects}
-						onCreateProject={handleCreateProject}
+						tasks={tasks}
 						selectedProjectId={selectedProjectId}
-						onSelectProject={setSelectedProjectId}
+						onProjectSelect={setSelectedProjectId}
+						onProjectCreate={handleCreateProject}
+						onProjectUpdate={handleUpdateProject}
+						onProjectDelete={handleDeleteProject}
 					/>
 				</div>
 

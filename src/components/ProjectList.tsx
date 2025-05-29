@@ -1,122 +1,96 @@
 import React, { useState } from 'react';
-import { Project } from '../types';
+import { Project, Task } from '../types';
+import ProjectDeleteModal from './ProjectDeleteModal';
 
 interface ProjectListProps {
 	projects: Project[];
-	onCreateProject: (name: string) => void;
+	tasks: Task[];
 	selectedProjectId: number | null;
-	onSelectProject: (projectId: number | null) => void;
+	onProjectSelect: (projectId: number | null) => void;
+	onProjectCreate: (name: string) => void;
+	onProjectUpdate: (projectId: number, name: string) => void;
+	onProjectDelete: (
+		projectId: number,
+		handleTasks: 'delete' | 'unassign'
+	) => void;
 }
 
-const ProjectList: React.FC<ProjectListProps> = ({
+export default function ProjectList({
 	projects,
-	onCreateProject,
+	tasks,
 	selectedProjectId,
-	onSelectProject,
-}) => {
-	const [newProjectName, setNewProjectName] = useState('');
+	onProjectSelect,
+	onProjectCreate,
+	onProjectUpdate,
+	onProjectDelete,
+}: ProjectListProps) {
 	const [isCreating, setIsCreating] = useState(false);
+	const [newProjectName, setNewProjectName] = useState('');
+	const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
+	const [editingProjectName, setEditingProjectName] = useState('');
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!newProjectName.trim()) return;
+	const handleCreateProject = () => {
+		if (newProjectName.trim()) {
+			onProjectCreate(newProjectName.trim());
+			setNewProjectName('');
+			setIsCreating(false);
+		}
+	};
 
-		onCreateProject(newProjectName.trim());
-		setNewProjectName('');
-		setIsCreating(false);
+	const handleEditProject = (project: Project) => {
+		setEditingProjectId(project.id);
+		setEditingProjectName(project.name);
+	};
+
+	const handleUpdateProject = () => {
+		if (editingProjectName.trim() && editingProjectId) {
+			onProjectUpdate(editingProjectId, editingProjectName.trim());
+			setEditingProjectId(null);
+			setEditingProjectName('');
+		}
+	};
+
+	const handleCancelEdit = () => {
+		setEditingProjectId(null);
+		setEditingProjectName('');
+	};
+
+	const handleDeleteClick = (project: Project) => {
+		setProjectToDelete(project);
+		setDeleteModalOpen(true);
+	};
+
+	const handleDeleteConfirm = (handleTasks: 'delete' | 'unassign') => {
+		if (projectToDelete) {
+			onProjectDelete(projectToDelete.id, handleTasks);
+			setDeleteModalOpen(false);
+			setProjectToDelete(null);
+		}
+	};
+
+	const handleDeleteCancel = () => {
+		setDeleteModalOpen(false);
+		setProjectToDelete(null);
 	};
 
 	return (
-		<div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6'>
-			<div className='flex items-center justify-between mb-6'>
-				<div>
-					<h3 className='text-lg font-semibold text-gray-900'>Projects</h3>
-					<p className='text-sm text-gray-600 mt-1'>
-						Organize your tasks by project or category
-					</p>
-				</div>
-				<button
-					onClick={() => setIsCreating(!isCreating)}
-					className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 ${
-						isCreating
-							? 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-							: 'bg-green-600 hover:bg-green-700 text-white'
-					}`}
-				>
-					{isCreating ? (
-						<>
-							<svg
-								className='w-4 h-4'
-								fill='none'
-								stroke='currentColor'
-								viewBox='0 0 24 24'
-							>
-								<path
-									strokeLinecap='round'
-									strokeLinejoin='round'
-									strokeWidth={2}
-									d='M6 18L18 6M6 6l12 12'
-								/>
-							</svg>
-							Cancel
-						</>
-					) : (
-						<>
-							<svg
-								className='w-4 h-4'
-								fill='none'
-								stroke='currentColor'
-								viewBox='0 0 24 24'
-							>
-								<path
-									strokeLinecap='round'
-									strokeLinejoin='round'
-									strokeWidth={2}
-									d='M12 4v16m8-8H4'
-								/>
-							</svg>
-							New Project
-						</>
-					)}
-				</button>
-			</div>
-
-			{isCreating && (
-				<div className='mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200'>
-					<form onSubmit={handleSubmit}>
-						<div className='flex gap-3'>
-							<input
-								type='text'
-								value={newProjectName}
-								onChange={(e) => setNewProjectName(e.target.value)}
-								placeholder='Enter project name...'
-								className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-								autoFocus
-							/>
-							<button
-								type='submit'
-								disabled={!newProjectName.trim()}
-								className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200'
-							>
-								Create
-							</button>
-						</div>
-					</form>
-				</div>
-			)}
-
-			<div className='flex flex-wrap gap-2'>
-				<button
-					onClick={() => onSelectProject(null)}
-					className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-						selectedProjectId === null
-							? 'bg-blue-600 text-white shadow-sm'
-							: 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:shadow-sm'
-					}`}
-				>
-					<span className='flex items-center gap-2'>
+		<>
+			<div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6'>
+				<div className='flex items-center justify-between mb-4'>
+					<div>
+						<h2 className='text-lg font-semibold text-gray-900'>Projects</h2>
+						<p className='text-sm text-gray-600'>
+							Organize your tasks by project
+						</p>
+					</div>
+					<button
+						onClick={() => setIsCreating(true)}
+						className='inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors'
+					>
 						<svg
-							className='w-4 h-4'
+							className='w-4 h-4 mr-1'
 							fill='none'
 							stroke='currentColor'
 							viewBox='0 0 24 24'
@@ -125,49 +99,181 @@ const ProjectList: React.FC<ProjectListProps> = ({
 								strokeLinecap='round'
 								strokeLinejoin='round'
 								strokeWidth={2}
-								d='M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'
+								d='M12 4v16m8-8H4'
 							/>
 						</svg>
-						All Tasks
-					</span>
-				</button>
-				{projects.map((project) => (
+						New Project
+					</button>
+				</div>
+
+				<div className='flex flex-wrap gap-2 mb-4'>
 					<button
-						key={project.id}
-						onClick={() => onSelectProject(project.id)}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-							selectedProjectId === project.id
-								? 'bg-blue-600 text-white shadow-sm'
-								: 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:shadow-sm'
+						onClick={() => onProjectSelect(null)}
+						className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+							selectedProjectId === null
+								? 'bg-blue-100 text-blue-800 border border-blue-200'
+								: 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
 						}`}
 					>
-						<span className='flex items-center gap-2'>
-							<svg
-								className='w-4 h-4'
-								fill='none'
-								stroke='currentColor'
-								viewBox='0 0 24 24'
-							>
-								<path
-									strokeLinecap='round'
-									strokeLinejoin='round'
-									strokeWidth={2}
-									d='M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z'
-								/>
-								<path
-									strokeLinecap='round'
-									strokeLinejoin='round'
-									strokeWidth={2}
-									d='M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z'
-								/>
-							</svg>
-							{project.name}
-						</span>
+						All Tasks ({tasks.length})
 					</button>
-				))}
-			</div>
-		</div>
-	);
-};
+					{projects.map((project) => {
+						const projectTaskCount = tasks.filter(
+							(task) => task.projectId === project.id
+						).length;
 
-export default ProjectList;
+						return (
+							<div key={project.id} className='relative group'>
+								{editingProjectId === project.id ? (
+									<div className='flex items-center gap-1'>
+										<input
+											type='text'
+											value={editingProjectName}
+											onChange={(e) => setEditingProjectName(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter') handleUpdateProject();
+												if (e.key === 'Escape') handleCancelEdit();
+											}}
+											className='px-3 py-1 text-sm border border-blue-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500'
+											autoFocus
+										/>
+										<button
+											onClick={handleUpdateProject}
+											className='p-1 text-green-600 hover:text-green-700'
+										>
+											<svg
+												className='w-4 h-4'
+												fill='none'
+												stroke='currentColor'
+												viewBox='0 0 24 24'
+											>
+												<path
+													strokeLinecap='round'
+													strokeLinejoin='round'
+													strokeWidth={2}
+													d='M5 13l4 4L19 7'
+												/>
+											</svg>
+										</button>
+										<button
+											onClick={handleCancelEdit}
+											className='p-1 text-gray-400 hover:text-gray-600'
+										>
+											<svg
+												className='w-4 h-4'
+												fill='none'
+												stroke='currentColor'
+												viewBox='0 0 24 24'
+											>
+												<path
+													strokeLinecap='round'
+													strokeLinejoin='round'
+													strokeWidth={2}
+													d='M6 18L18 6M6 6l12 12'
+												/>
+											</svg>
+										</button>
+									</div>
+								) : (
+									<div className='flex items-center'>
+										<button
+											onClick={() => onProjectSelect(project.id)}
+											className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+												selectedProjectId === project.id
+													? 'bg-blue-100 text-blue-800 border border-blue-200'
+													: 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+											}`}
+										>
+											{project.name} ({projectTaskCount})
+										</button>
+										<div className='ml-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1'>
+											<button
+												onClick={() => handleEditProject(project)}
+												className='p-1 text-gray-400 hover:text-blue-600 transition-colors'
+												title='Edit project'
+											>
+												<svg
+													className='w-3 h-3'
+													fill='none'
+													stroke='currentColor'
+													viewBox='0 0 24 24'
+												>
+													<path
+														strokeLinecap='round'
+														strokeLinejoin='round'
+														strokeWidth={2}
+														d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+													/>
+												</svg>
+											</button>
+											<button
+												onClick={() => handleDeleteClick(project)}
+												className='p-1 text-gray-400 hover:text-red-600 transition-colors'
+												title='Delete project'
+											>
+												<svg
+													className='w-3 h-3'
+													fill='none'
+													stroke='currentColor'
+													viewBox='0 0 24 24'
+												>
+													<path
+														strokeLinecap='round'
+														strokeLinejoin='round'
+														strokeWidth={2}
+														d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
+													/>
+												</svg>
+											</button>
+										</div>
+									</div>
+								)}
+							</div>
+						);
+					})}
+				</div>
+
+				{isCreating && (
+					<div className='flex items-center gap-2 mt-4 p-3 bg-gray-50 rounded-md'>
+						<input
+							type='text'
+							value={newProjectName}
+							onChange={(e) => setNewProjectName(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter') handleCreateProject();
+								if (e.key === 'Escape') setIsCreating(false);
+							}}
+							placeholder='Enter project name...'
+							className='flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+							autoFocus
+						/>
+						<button
+							onClick={handleCreateProject}
+							disabled={!newProjectName.trim()}
+							className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+						>
+							Create
+						</button>
+						<button
+							onClick={() => {
+								setIsCreating(false);
+								setNewProjectName('');
+							}}
+							className='px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors'
+						>
+							Cancel
+						</button>
+					</div>
+				)}
+			</div>
+
+			<ProjectDeleteModal
+				isOpen={deleteModalOpen}
+				onClose={handleDeleteCancel}
+				project={projectToDelete}
+				tasks={tasks}
+				onConfirm={handleDeleteConfirm}
+			/>
+		</>
+	);
+}

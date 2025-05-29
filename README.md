@@ -18,6 +18,8 @@ A modern, feature-rich task management application built with Next.js 15, TypeSc
 ### 📁 **Project Organization**
 
 - ✅ Create and manage projects
+- ✅ Edit project names inline
+- ✅ Delete projects with task handling options
 - ✅ Assign tasks to projects
 - ✅ Filter tasks by project
 - ✅ Project-based task organization
@@ -106,10 +108,19 @@ A modern, feature-rich task management application built with Next.js 15, TypeSc
 
 ### Managing Projects
 
-1. Use the "New Project" button in the Projects section
-2. Enter a project name and click "Create"
-3. Filter tasks by clicking on project buttons
-4. Click "All Tasks" to view all tasks
+1. **Create Projects**: Use the "New Project" button in the Projects section
+2. **Edit Projects**:
+   - Hover over any project button to reveal edit/delete icons
+   - Click the edit icon (pencil) to rename the project inline
+   - Press Enter to save or Escape to cancel
+3. **Delete Projects**:
+   - Hover over any project button and click the delete icon (trash)
+   - If the project contains tasks, you'll be prompted to choose:
+     - **Keep tasks**: Unassign tasks from the project (tasks remain)
+     - **Delete tasks**: Remove all tasks along with the project
+   - Empty projects can be deleted immediately
+4. **Filter by Project**: Click on any project button to view only its tasks
+5. **View All Tasks**: Click "All Tasks" to see tasks from all projects
 
 ### Task Operations
 
@@ -135,6 +146,7 @@ my-productivity-app/
 │   │   ├── layout.tsx
 │   │   └── page.tsx
 │   ├── components/
+│   │   ├── ProjectDeleteModal.tsx
 │   │   ├── ProjectList.tsx
 │   │   ├── TaskForm.tsx
 │   │   └── TaskItem.tsx
@@ -156,59 +168,24 @@ my-productivity-app/
 - **`TaskItem.tsx`**: Individual task display with actions and metadata
 - **`TaskForm.tsx`**: Modal form for creating and editing tasks
 - **`ProjectList.tsx`**: Project management and filtering interface
+- **`ProjectDeleteModal.tsx`**: Confirmation modal for project deletion with task handling
 - **`data.js`**: In-memory data store with sample data
 
 ## 🔧 API Endpoints
+
+### Tasks
 
 - `GET /api/tasks` - Fetch all tasks
 - `POST /api/tasks` - Create a new task
 - `GET /api/tasks/[id]` - Get a specific task
 - `PUT /api/tasks/[id]` - Update a task
 - `DELETE /api/tasks/[id]` - Delete a task
+
+### Projects
+
 - `GET /api/projects` - Fetch all projects
 - `POST /api/projects` - Create a new project
-
-## 🎨 Design Features
-
-- **Color Palette**: Professional blue primary (#3B82F6) with semantic colors
-- **Typography**: Clean hierarchy with proper font weights
-- **Spacing**: Consistent 4px/8px grid system
-- **Interactive Elements**: Smooth hover effects and transitions
-- **Responsive Design**: Mobile-first approach
-- **Accessibility**: WCAG AA compliant
-
-## 🚧 Future Enhancements
-
-- [ ] User authentication and multi-user support
-- [ ] Database integration (PostgreSQL/MongoDB)
-- [ ] Real-time collaboration
-- [ ] Task templates
-- [ ] Time tracking
-- [ ] Calendar integration
-- [ ] Export functionality
-- [ ] Dark mode theme
-- [ ] Mobile app (React Native)
-- [ ] Email notifications
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Next.js](https://nextjs.org/) for the amazing React framework
-- [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
-- [Heroicons](https://heroicons.com/) for the beautiful SVG icons
-- [TypeScript](https://www.typescriptlang.org/) for type safety
-
----
-
-**Built with ❤️ using Next.js and Tailwind CSS**
+- `GET /api/projects/[id]` - Get a specific project
+- `PUT /api/projects/[id]` - Update a project
+- `DELETE /api/projects/[id]` - Delete a project
+  - Query parameter: `handleTasks=delete|unassign` - How to handle associated tasks
