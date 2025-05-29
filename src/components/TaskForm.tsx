@@ -81,28 +81,44 @@ const TaskForm: React.FC<TaskFormProps> = ({
 		(t) => !t.parentId && (!task || t.id !== task.id)
 	);
 
+	const isEditing = task && task.id !== 0;
+	const isCreatingSubtask = task && task.parentId && !isEditing;
+	const parentTask = isCreatingSubtask
+		? tasks.find((t) => t.id === task.parentId)
+		: null;
+
 	return (
 		<div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
 			<div className='bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden'>
 				{/* Header */}
-				<div className='px-6 py-4 border-b border-gray-200 bg-gray-50'>
+				<div className='px-6 py-4 border-b border-gray-200'>
 					<div className='flex items-center justify-between'>
 						<div>
 							<h2 className='text-xl font-semibold text-gray-900'>
-								{task ? 'Edit Task' : 'Create New Task'}
+								{isEditing
+									? 'Edit Task'
+									: isCreatingSubtask
+									? 'Create Subtask'
+									: 'Create New Task'}
 							</h2>
+							{isCreatingSubtask && parentTask && (
+								<p className='text-sm text-gray-600 mt-1'>
+									Creating subtask for:{' '}
+									<span className='font-medium'>{parentTask.title}</span>
+								</p>
+							)}
 							<p className='text-sm text-gray-600 mt-1'>
-								{task
-									? 'Update your task details'
-									: 'Add a new task to your list'}
+								{isEditing
+									? 'Update your task details below'
+									: 'Fill in the details for your new task'}
 							</p>
 						</div>
 						<button
 							onClick={onCancel}
-							className='p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200'
+							className='text-gray-400 hover:text-gray-600 transition-colors'
 						>
 							<svg
-								className='w-5 h-5'
+								className='w-6 h-6'
 								fill='none'
 								stroke='currentColor'
 								viewBox='0 0 24 24'
@@ -208,25 +224,33 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
 							<div>
 								<label className='block text-sm font-medium text-gray-700 mb-2'>
-									Parent Task (Make this a subtask)
+									Parent Task (Optional)
 								</label>
 								<select
 									value={formData.parentId || ''}
 									onChange={(e) =>
-										handleChange(
-											'parentId',
-											e.target.value ? parseInt(e.target.value) : null
-										)
+										setFormData({
+											...formData,
+											parentId: e.target.value
+												? parseInt(e.target.value)
+												: null,
+										})
 									}
-									className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+									disabled={!!isCreatingSubtask}
+									className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed'
 								>
-									<option value=''>No Parent Task</option>
+									<option value=''>No parent task</option>
 									{mainTasks.map((mainTask) => (
 										<option key={mainTask.id} value={mainTask.id}>
 											{mainTask.title}
 										</option>
 									))}
 								</select>
+								{isCreatingSubtask && (
+									<p className='text-xs text-gray-500 mt-1'>
+										Parent task is automatically set when creating a subtask
+									</p>
+								)}
 							</div>
 						</div>
 

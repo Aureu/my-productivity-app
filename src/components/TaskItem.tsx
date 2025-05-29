@@ -1,256 +1,118 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Task, Project } from '../types';
 
 interface TaskItemProps {
 	task: Task;
 	projects: Project[];
 	isSubtask?: boolean;
+	subtasks?: Task[];
 	onEdit: (task: Task) => void;
 	onDelete: (taskId: number) => void;
 	onToggleComplete: (taskId: number, completed: boolean) => void;
+	onCreateSubtask?: (parentTask: Task) => void;
 }
 
-const TaskItem: React.FC<TaskItemProps> = ({
+export default function TaskItem({
 	task,
 	projects,
 	isSubtask = false,
+	subtasks = [],
 	onEdit,
 	onDelete,
 	onToggleComplete,
-}) => {
-	const project = projects.find((p) => p.id === task.projectId);
+	onCreateSubtask,
+}: TaskItemProps) {
+	const [isExpanded, setIsExpanded] = useState(true);
 
-	const getPriorityConfig = (priority: string) => {
+	const project = projects.find((p) => p.id === task.projectId);
+	const hasSubtasks = subtasks.length > 0;
+	const canHaveSubtasks = !isSubtask; // Only main tasks can have subtasks
+
+	const getPriorityColor = (priority: string) => {
 		switch (priority) {
 			case 'high':
-				return {
-					color: 'bg-red-100 text-red-800 border-red-200',
-					icon: '🔴',
-					label: 'High Priority',
-				};
+				return 'bg-red-100 text-red-800 border-red-200';
 			case 'medium':
-				return {
-					color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-					icon: '🟡',
-					label: 'Medium Priority',
-				};
+				return 'bg-yellow-100 text-yellow-800 border-yellow-200';
 			case 'low':
-				return {
-					color: 'bg-green-100 text-green-800 border-green-200',
-					icon: '🟢',
-					label: 'Low Priority',
-				};
+				return 'bg-green-100 text-green-800 border-green-200';
 			default:
-				return null;
+				return 'bg-gray-100 text-gray-600 border-gray-200';
 		}
 	};
 
-	const formatDate = (dateString: string | null) => {
-		if (!dateString) return '';
-		const date = new Date(dateString);
-		return date.toLocaleDateString('en-US', {
-			month: 'short',
-			day: 'numeric',
-			year: 'numeric',
-		});
+	const getPriorityEmoji = (priority: string) => {
+		switch (priority) {
+			case 'high':
+				return '🔴';
+			case 'medium':
+				return '🟡';
+			case 'low':
+				return '🟢';
+			default:
+				return '';
+		}
 	};
 
-	const isOverdue = (dueDate: string | null) => {
-		if (!dueDate) return false;
+	const getDueDateStatus = (dueDate: string | null) => {
+		if (!dueDate) return null;
+
 		const today = new Date();
 		const due = new Date(dueDate);
-		return due < today && !task.completed;
+		const todayString = today.toISOString().split('T')[0];
+		const dueDateString = due.toISOString().split('T')[0];
+
+		if (dueDateString < todayString) {
+			return {
+				status: 'overdue',
+				color: 'bg-red-100 text-red-800 border-red-200',
+			};
+		} else if (dueDateString === todayString) {
+			return {
+				status: 'due-today',
+				color: 'bg-orange-100 text-orange-800 border-orange-200',
+			};
+		}
+		return {
+			status: 'upcoming',
+			color: 'bg-blue-100 text-blue-800 border-blue-200',
+		};
 	};
 
-	const isDueToday = (dueDate: string | null) => {
-		if (!dueDate) return false;
-		const today = new Date();
-		const due = new Date(dueDate);
-		return due.toDateString() === today.toDateString();
-	};
+	const dueDateStatus = getDueDateStatus(task.dueDate);
 
-	const priorityConfig = getPriorityConfig(task.priority);
+	const toggleExpanded = () => {
+		if (hasSubtasks) {
+			setIsExpanded(!isExpanded);
+		}
+	};
 
 	return (
 		<div
-			className={`group bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 ${
-				isSubtask ? 'ml-6 border-l-4 border-l-blue-200 bg-blue-50/30' : ''
-			} ${task.completed ? 'opacity-75' : ''}`}
+			className={`${isSubtask ? 'ml-8 border-l-2 border-blue-200 pl-4' : ''}`}
 		>
-			<div className='flex items-start gap-3'>
-				{/* Checkbox */}
-				<div className='flex-shrink-0 mt-1'>
-					<input
-						type='checkbox'
-						checked={task.completed}
-						onChange={(e) => onToggleComplete(task.id, e.target.checked)}
-						className='w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer'
-					/>
-				</div>
-
-				{/* Main Content */}
-				<div className='flex-1 min-w-0'>
-					{/* Title and Actions */}
-					<div className='flex items-start justify-between gap-3 mb-2'>
-						<h3
-							className={`text-lg font-medium ${
-								task.completed ? 'line-through text-gray-500' : 'text-gray-900'
+			<div
+				className={`group bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 ${
+					task.completed ? 'opacity-75' : ''
+				}`}
+			>
+				<div className='flex items-start gap-3'>
+					{/* Expand/Collapse Button for Parent Tasks */}
+					{canHaveSubtasks && (
+						<button
+							onClick={toggleExpanded}
+							className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded transition-colors ${
+								hasSubtasks
+									? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+									: 'text-gray-300 cursor-default'
 							}`}
+							disabled={!hasSubtasks}
 						>
-							{task.title}
-						</h3>
-
-						{/* Action Buttons */}
-						<div className='flex-shrink-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
-							<button
-								onClick={() => onEdit(task)}
-								className='p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200'
-								title='Edit task'
-							>
+							{hasSubtasks ? (
 								<svg
-									className='w-4 h-4'
-									fill='none'
-									stroke='currentColor'
-									viewBox='0 0 24 24'
-								>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
-									/>
-								</svg>
-							</button>
-							<button
-								onClick={() => onDelete(task.id)}
-								className='p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200'
-								title='Delete task'
-							>
-								<svg
-									className='w-4 h-4'
-									fill='none'
-									stroke='currentColor'
-									viewBox='0 0 24 24'
-								>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
-									/>
-								</svg>
-							</button>
-						</div>
-					</div>
-
-					{/* Description */}
-					{task.description && (
-						<p
-							className={`text-sm mb-3 ${
-								task.completed ? 'text-gray-400' : 'text-gray-600'
-							}`}
-						>
-							{task.description}
-						</p>
-					)}
-
-					{/* Badges and Metadata */}
-					<div className='flex flex-wrap items-center gap-2'>
-						{/* Priority Badge */}
-						{priorityConfig && (
-							<span
-								className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${priorityConfig.color}`}
-							>
-								<span className='text-xs'>{priorityConfig.icon}</span>
-								{priorityConfig.label}
-							</span>
-						)}
-
-						{/* Due Date Badge */}
-						{task.dueDate && (
-							<span
-								className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${
-									isOverdue(task.dueDate)
-										? 'bg-red-100 text-red-800 border-red-200'
-										: isDueToday(task.dueDate)
-										? 'bg-orange-100 text-orange-800 border-orange-200'
-										: 'bg-gray-100 text-gray-700 border-gray-200'
-								}`}
-							>
-								<svg
-									className='w-3 h-3'
-									fill='none'
-									stroke='currentColor'
-									viewBox='0 0 24 24'
-								>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
-									/>
-								</svg>
-								{isOverdue(task.dueDate) && 'Overdue: '}
-								{isDueToday(task.dueDate) && 'Due Today: '}
-								{formatDate(task.dueDate)}
-							</span>
-						)}
-
-						{/* Project Badge */}
-						{project && (
-							<span className='inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200'>
-								<svg
-									className='w-3 h-3'
-									fill='none'
-									stroke='currentColor'
-									viewBox='0 0 24 24'
-								>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z'
-									/>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z'
-									/>
-								</svg>
-								{project.name}
-							</span>
-						)}
-
-						{/* Recurrence Badge */}
-						{task.recurrenceRule && (
-							<span className='inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200'>
-								<svg
-									className='w-3 h-3'
-									fill='none'
-									stroke='currentColor'
-									viewBox='0 0 24 24'
-								>
-									<path
-										strokeLinecap='round'
-										strokeLinejoin='round'
-										strokeWidth={2}
-										d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
-									/>
-								</svg>
-								{task.recurrenceRule.type.charAt(0).toUpperCase() +
-									task.recurrenceRule.type.slice(1)}
-								{task.recurrenceRule.day && ` (${task.recurrenceRule.day})`}
-								{task.recurrenceRule.dayOfMonth &&
-									` (${task.recurrenceRule.dayOfMonth})`}
-							</span>
-						)}
-
-						{/* Subtask Indicator */}
-						{isSubtask && (
-							<span className='inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200'>
-								<svg
-									className='w-3 h-3'
+									className={`w-4 h-4 transition-transform duration-200 ${
+										isExpanded ? 'rotate-90' : ''
+									}`}
 									fill='none'
 									stroke='currentColor'
 									viewBox='0 0 24 24'
@@ -262,14 +124,190 @@ const TaskItem: React.FC<TaskItemProps> = ({
 										d='M9 5l7 7-7 7'
 									/>
 								</svg>
-								Subtask
-							</span>
+							) : (
+								<div className='w-4 h-4'></div>
+							)}
+						</button>
+					)}
+
+					{/* Checkbox */}
+					<button
+						onClick={() => onToggleComplete(task.id, !task.completed)}
+						className='flex-shrink-0 w-5 h-5 rounded border-2 border-gray-300 flex items-center justify-center hover:border-blue-500 transition-colors'
+					>
+						{task.completed && (
+							<svg
+								className='w-3 h-3 text-blue-600'
+								fill='currentColor'
+								viewBox='0 0 20 20'
+							>
+								<path
+									fillRule='evenodd'
+									d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
+									clipRule='evenodd'
+								/>
+							</svg>
 						)}
+					</button>
+
+					{/* Task Content */}
+					<div className='flex-1 min-w-0'>
+						<div className='flex items-start justify-between'>
+							<div className='flex-1'>
+								<h3
+									className={`font-medium text-gray-900 ${
+										task.completed ? 'line-through text-gray-500' : ''
+									}`}
+								>
+									{task.title}
+								</h3>
+								{task.description && (
+									<p
+										className={`text-sm mt-1 ${
+											task.completed ? 'text-gray-400' : 'text-gray-600'
+										}`}
+									>
+										{task.description}
+									</p>
+								)}
+							</div>
+
+							{/* Action Buttons */}
+							<div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+								{canHaveSubtasks && onCreateSubtask && (
+									<button
+										onClick={() => onCreateSubtask(task)}
+										className='p-1 text-gray-400 hover:text-green-600 transition-colors'
+										title='Add subtask'
+									>
+										<svg
+											className='w-4 h-4'
+											fill='none'
+											stroke='currentColor'
+											viewBox='0 0 24 24'
+										>
+											<path
+												strokeLinecap='round'
+												strokeLinejoin='round'
+												strokeWidth={2}
+												d='M12 4v16m8-8H4'
+											/>
+										</svg>
+									</button>
+								)}
+								<button
+									onClick={() => onEdit(task)}
+									className='p-1 text-gray-400 hover:text-blue-600 transition-colors'
+									title='Edit task'
+								>
+									<svg
+										className='w-4 h-4'
+										fill='none'
+										stroke='currentColor'
+										viewBox='0 0 24 24'
+									>
+										<path
+											strokeLinecap='round'
+											strokeLinejoin='round'
+											strokeWidth={2}
+											d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+										/>
+									</svg>
+								</button>
+								<button
+									onClick={() => onDelete(task.id)}
+									className='p-1 text-gray-400 hover:text-red-600 transition-colors'
+									title='Delete task'
+								>
+									<svg
+										className='w-4 h-4'
+										fill='none'
+										stroke='currentColor'
+										viewBox='0 0 24 24'
+									>
+										<path
+											strokeLinecap='round'
+											strokeLinejoin='round'
+											strokeWidth={2}
+											d='M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
+
+						{/* Task Metadata */}
+						<div className='flex flex-wrap items-center gap-2 mt-3'>
+							{/* Priority Badge */}
+							{task.priority && task.priority !== 'none' && (
+								<span
+									className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(
+										task.priority
+									)}`}
+								>
+									{getPriorityEmoji(task.priority)}{' '}
+									{task.priority.charAt(0).toUpperCase() +
+										task.priority.slice(1)}
+								</span>
+							)}
+
+							{/* Due Date Badge */}
+							{task.dueDate && dueDateStatus && (
+								<span
+									className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${dueDateStatus.color}`}
+								>
+									📅{' '}
+									{dueDateStatus.status === 'overdue'
+										? 'Overdue'
+										: dueDateStatus.status === 'due-today'
+										? 'Due Today'
+										: new Date(task.dueDate).toLocaleDateString()}
+								</span>
+							)}
+
+							{/* Project Badge */}
+							{project && (
+								<span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200'>
+									📁 {project.name}
+								</span>
+							)}
+
+							{/* Recurrence Badge */}
+							{task.recurrenceRule && (
+								<span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200'>
+									🔄{' '}
+									{task.recurrenceRule.type.charAt(0).toUpperCase() +
+										task.recurrenceRule.type.slice(1)}
+								</span>
+							)}
+
+							{/* Subtask Count Badge */}
+							{canHaveSubtasks && hasSubtasks && (
+								<span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200'>
+									📋 {subtasks.length} subtask{subtasks.length !== 1 ? 's' : ''}
+								</span>
+							)}
+						</div>
 					</div>
 				</div>
 			</div>
+
+			{/* Subtasks */}
+			{canHaveSubtasks && hasSubtasks && isExpanded && (
+				<div className='mt-2 space-y-2'>
+					{subtasks.map((subtask) => (
+						<TaskItem
+							key={subtask.id}
+							task={subtask}
+							projects={projects}
+							isSubtask={true}
+							onEdit={onEdit}
+							onDelete={onDelete}
+							onToggleComplete={onToggleComplete}
+						/>
+					))}
+				</div>
+			)}
 		</div>
 	);
-};
-
-export default TaskItem;
+}

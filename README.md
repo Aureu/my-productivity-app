@@ -14,6 +14,9 @@ A modern, feature-rich task management application built with Next.js 15, TypeSc
 - ✅ Task priorities with color-coded badges (High 🔴, Medium 🟡, Low 🟢)
 - ✅ Due date tracking with overdue indicators
 - ✅ Hierarchical subtasks with visual nesting
+- ✅ Expand/collapse parent tasks to show/hide subtasks
+- ✅ Direct subtask creation from parent tasks
+- ✅ Automatic parent task inheritance for subtasks
 
 ### 📁 **Project Organization**
 
@@ -127,7 +130,9 @@ A modern, feature-rich task management application built with Next.js 15, TypeSc
 - **Complete**: Check the checkbox next to any task
 - **Edit**: Hover over a task and click the edit icon
 - **Delete**: Hover over a task and click the delete icon
-- **Subtasks**: Create subtasks by selecting a parent task when creating
+- **Create Subtask**: Hover over a parent task and click the plus icon
+- **Expand/Collapse**: Click the arrow icon next to parent tasks to show/hide subtasks
+- **Subtasks**: Create subtasks by selecting a parent task when creating or using the direct creation button
 
 ## 📁 Project Structure
 

@@ -236,13 +236,33 @@ export default function HomePage() {
 		}
 	};
 
+	// Function to handle creating a subtask
+	const handleCreateSubtask = (parentTask: Task) => {
+		setEditingTask({
+			id: 0,
+			title: '',
+			description: '',
+			dueDate: null,
+			priority: 'none',
+			projectId: parentTask.projectId, // Inherit project from parent
+			parentId: parentTask.id, // Set parent ID
+			completed: false,
+			recurrenceRule: null,
+		});
+		setShowTaskForm(true);
+	};
+
 	// Filter tasks based on selected project and organize by parent/child
 	const filteredTasks = tasks.filter(
 		(task) => selectedProjectId === null || task.projectId === selectedProjectId
 	);
 
 	const mainTasks = filteredTasks.filter((task) => !task.parentId);
-	const subtasks = filteredTasks.filter((task) => task.parentId);
+
+	// Helper function to get subtasks for a parent task
+	const getSubtasks = (parentId: number) => {
+		return filteredTasks.filter((task) => task.parentId === parentId);
+	};
 
 	if (isLoading) {
 		return (
@@ -403,35 +423,19 @@ export default function HomePage() {
 						) : (
 							<div className='space-y-3'>
 								{mainTasks.map((task) => (
-									<div key={task.id}>
-										<TaskItem
-											task={task}
-											projects={projects}
-											onEdit={(task) => {
-												setEditingTask(task);
-												setShowTaskForm(true);
-											}}
-											onDelete={handleDeleteTask}
-											onToggleComplete={handleToggleComplete}
-										/>
-										{/* Render subtasks */}
-										{subtasks
-											.filter((subtask) => subtask.parentId === task.id)
-											.map((subtask) => (
-												<TaskItem
-													key={subtask.id}
-													task={subtask}
-													projects={projects}
-													isSubtask={true}
-													onEdit={(task) => {
-														setEditingTask(task);
-														setShowTaskForm(true);
-													}}
-													onDelete={handleDeleteTask}
-													onToggleComplete={handleToggleComplete}
-												/>
-											))}
-									</div>
+									<TaskItem
+										key={task.id}
+										task={task}
+										projects={projects}
+										subtasks={getSubtasks(task.id)}
+										onEdit={(task) => {
+											setEditingTask(task);
+											setShowTaskForm(true);
+										}}
+										onDelete={handleDeleteTask}
+										onToggleComplete={handleToggleComplete}
+										onCreateSubtask={handleCreateSubtask}
+									/>
 								))}
 							</div>
 						)}
