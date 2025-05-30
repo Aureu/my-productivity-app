@@ -6,7 +6,7 @@ interface ProjectDeleteModalProps {
 	onClose: () => void;
 	project: Project | null;
 	tasks: Task[];
-	onConfirm: (handleTasks: 'delete' | 'unassign') => void;
+	onConfirm: (deleteAssociatedTasks: boolean) => void;
 }
 
 export default function ProjectDeleteModal({
@@ -58,14 +58,14 @@ export default function ProjectDeleteModal({
 
 								<div className='space-y-3'>
 									<button
-										onClick={() => onConfirm('unassign')}
+										onClick={() => onConfirm(false)}
 										className='w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors'
 									>
 										Keep tasks (unassign from project)
 									</button>
 
 									<button
-										onClick={() => onConfirm('delete')}
+										onClick={() => onConfirm(true)}
 										className='w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors'
 									>
 										Delete tasks along with project
@@ -79,7 +79,7 @@ export default function ProjectDeleteModal({
 								</p>
 
 								<button
-									onClick={() => onConfirm('delete')}
+									onClick={() => onConfirm(true)}
 									className='w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors'
 								>
 									Delete Project

@@ -5,14 +5,11 @@ import ProjectDeleteModal from './ProjectDeleteModal';
 interface ProjectListProps {
 	projects: Project[];
 	tasks: Task[];
-	selectedProjectId: number | null;
-	onProjectSelect: (projectId: number | null) => void;
+	selectedProjectId: string | null;
+	onProjectSelect: (projectId: string | null) => void;
 	onProjectCreate: (name: string) => void;
-	onProjectUpdate: (projectId: number, name: string) => void;
-	onProjectDelete: (
-		projectId: number,
-		handleTasks: 'delete' | 'unassign'
-	) => void;
+	onProjectUpdate: (projectId: string, name: string) => void;
+	onProjectDelete: (projectId: string, deleteAssociatedTasks: boolean) => void;
 }
 
 export default function ProjectList({
@@ -26,7 +23,7 @@ export default function ProjectList({
 }: ProjectListProps) {
 	const [isCreating, setIsCreating] = useState(false);
 	const [newProjectName, setNewProjectName] = useState('');
-	const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
+	const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 	const [editingProjectName, setEditingProjectName] = useState('');
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
@@ -62,9 +59,9 @@ export default function ProjectList({
 		setDeleteModalOpen(true);
 	};
 
-	const handleDeleteConfirm = (handleTasks: 'delete' | 'unassign') => {
+	const handleDeleteConfirm = (deleteAssociatedTasks: boolean) => {
 		if (projectToDelete) {
-			onProjectDelete(projectToDelete.id, handleTasks);
+			onProjectDelete(projectToDelete.id, deleteAssociatedTasks);
 			setDeleteModalOpen(false);
 			setProjectToDelete(null);
 		}

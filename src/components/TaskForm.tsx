@@ -7,6 +7,7 @@ interface TaskFormProps {
 	tasks: Task[];
 	onSubmit: (taskData: Partial<Task>) => void;
 	onCancel: () => void;
+	isSubmitting?: boolean;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({
@@ -15,14 +16,15 @@ const TaskForm: React.FC<TaskFormProps> = ({
 	tasks,
 	onSubmit,
 	onCancel,
+	isSubmitting = false,
 }) => {
 	const [formData, setFormData] = useState({
 		title: '',
 		description: '',
 		dueDate: '',
 		priority: 'none' as 'none' | 'low' | 'medium' | 'high',
-		projectId: null as number | null,
-		parentId: null as number | null,
+		projectId: null as string | null,
+		parentId: null as string | null,
 		recurrenceType: 'none' as 'none' | 'daily' | 'weekly' | 'monthly',
 		recurrenceDay: '',
 		recurrenceDayOfMonth: 1,
@@ -81,7 +83,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 		(t) => !t.parentId && (!task || t.id !== task.id)
 	);
 
-	const isEditing = task && task.id !== 0;
+	const isEditing = task && task.id !== '';
 	const isCreatingSubtask = task && task.parentId && !isEditing;
 	const parentTask = isCreatingSubtask
 		? tasks.find((t) => t.id === task.parentId)
@@ -208,7 +210,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 									onChange={(e) =>
 										handleChange(
 											'projectId',
-											e.target.value ? parseInt(e.target.value) : null
+											e.target.value ? e.target.value : null
 										)
 									}
 									className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -231,9 +233,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 									onChange={(e) =>
 										setFormData({
 											...formData,
-											parentId: e.target.value
-												? parseInt(e.target.value)
-												: null,
+											parentId: e.target.value ? e.target.value : null,
 										})
 									}
 									disabled={!!isCreatingSubtask}
@@ -318,17 +318,25 @@ const TaskForm: React.FC<TaskFormProps> = ({
 					<button
 						type='button'
 						onClick={onCancel}
-						className='px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200'
+						disabled={isSubmitting}
+						className='px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
 					>
 						Cancel
 					</button>
 					<button
 						type='submit'
 						onClick={handleSubmit}
-						disabled={!formData.title.trim()}
-						className='px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200'
+						disabled={!formData.title.trim() || isSubmitting}
+						className='px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 flex items-center gap-2'
 					>
-						{task ? 'Update Task' : 'Create Task'}
+						{isSubmitting && (
+							<div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
+						)}
+						{isSubmitting
+							? 'Saving...'
+							: task && task.id
+							? 'Update Task'
+							: 'Create Task'}
 					</button>
 				</div>
 			</div>

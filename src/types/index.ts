@@ -6,18 +6,19 @@ export interface RecurrenceRule {
 }
 
 export interface Task {
-	id: number;
+	id: string;
 	title: string;
 	description: string;
 	dueDate: string | null;
 	priority: 'none' | 'low' | 'medium' | 'high';
-	projectId: number | null;
-	parentId: number | null;
+	projectId: string | null;
+	parentId: string | null;
 	completed: boolean;
 	recurrenceRule: RecurrenceRule | null;
 }
 
 export interface Project {
-	id: number;
+	id: string;
 	name: string;
+	activeTaskCount?: number;
 }

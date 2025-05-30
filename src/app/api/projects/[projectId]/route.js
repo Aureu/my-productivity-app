@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
 import {
-	tasks,
-	findProjectById,
+	getProjectById,
 	updateProject,
 	deleteProject,
-} from '../../../../lib/data.js';
+} from '../../../../lib/firebaseData.js';
 
 // Handler for GET requests (fetch a specific project)
 export async function GET(request, { params }) {
 	try {
-		const projectId = parseInt(params.projectId);
-		const project = findProjectById(projectId);
+		const project = await getProjectById(params.projectId);
 
 		if (!project) {
 			return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -26,20 +24,19 @@ export async function GET(request, { params }) {
 	}
 }
 
-// Handler for PUT requests (update a project)
+// Handler for PUT requests (update a specific project)
 export async function PUT(request, { params }) {
 	try {
-		const projectId = parseInt(params.projectId);
-		const projectData = await request.json();
+		const updateData = await request.json();
 
-		if (!projectData.name || !projectData.name.trim()) {
+		if (!updateData.name) {
 			return NextResponse.json(
 				{ error: 'Project name is required' },
 				{ status: 400 }
 			);
 		}
 
-		const updatedProject = updateProject(projectId, projectData);
+		const updatedProject = await updateProject(params.projectId, updateData);
 
 		if (!updatedProject) {
 			return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -55,67 +52,18 @@ export async function PUT(request, { params }) {
 	}
 }
 
-// Handler for DELETE requests (delete a project)
+// Handler for DELETE requests (delete a specific project)
 export async function DELETE(request, { params }) {
 	try {
-		const projectId = parseInt(params.projectId);
-		const url = new URL(request.url);
-		const handleTasks = url.searchParams.get('handleTasks'); // 'delete' or 'unassign'
+		// Get query parameter to determine if associated tasks should be deleted
+		const { searchParams } = new URL(request.url);
+		const deleteAssociatedTasks =
+			searchParams.get('deleteAssociatedTasks') === 'true';
 
-		const project = findProjectById(projectId);
-		if (!project) {
-			return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-		}
-
-		// Find tasks assigned to this project
-		const projectTasks = tasks.filter((task) => task.projectId === projectId);
-
-		if (projectTasks.length > 0 && !handleTasks) {
-			// Return information about tasks that need to be handled
-			return NextResponse.json(
-				{
-					error: 'Project contains tasks',
-					taskCount: projectTasks.length,
-					tasks: projectTasks.map((task) => ({
-						id: task.id,
-						title: task.title,
-					})),
-				},
-				{ status: 409 }
-			); // 409 Conflict
-		}
-
-		// Handle tasks based on the specified action
-		if (projectTasks.length > 0) {
-			if (handleTasks === 'delete') {
-				// Delete all tasks in the project (including subtasks)
-				const taskIdsToDelete = [];
-
-				// First, collect all task IDs (including subtasks)
-				projectTasks.forEach((task) => {
-					taskIdsToDelete.push(task.id);
-					// Find subtasks of this task
-					const subtasks = tasks.filter((t) => t.parentId === task.id);
-					subtasks.forEach((subtask) => taskIdsToDelete.push(subtask.id));
-				});
-
-				// Remove all collected tasks
-				taskIdsToDelete.forEach((taskId) => {
-					const taskIndex = tasks.findIndex((t) => t.id === taskId);
-					if (taskIndex !== -1) {
-						tasks.splice(taskIndex, 1);
-					}
-				});
-			} else if (handleTasks === 'unassign') {
-				// Unassign tasks from the project
-				projectTasks.forEach((task) => {
-					task.projectId = null;
-				});
-			}
-		}
-
-		// Delete the project
-		const deletedProject = deleteProject(projectId);
+		const deletedProject = await deleteProject(
+			params.projectId,
+			deleteAssociatedTasks
+		);
 
 		if (!deletedProject) {
 			return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -123,9 +71,8 @@ export async function DELETE(request, { params }) {
 
 		return NextResponse.json({
 			message: 'Project deleted successfully',
-			deletedProject,
-			tasksHandled: projectTasks.length,
-			action: handleTasks || 'none',
+			project: deletedProject,
+			deletedAssociatedTasks,
 		});
 	} catch (error) {
 		console.error('Failed to delete project:', error);

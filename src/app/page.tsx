@@ -14,10 +14,11 @@ export default function HomePage() {
 	const [error, setError] = useState<string | null>(null);
 	const [showTaskForm, setShowTaskForm] = useState(false);
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
-	const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
+	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
 		null
 	);
 	const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	// Function to fetch tasks
 	const fetchTasks = async () => {
@@ -81,8 +82,11 @@ export default function HomePage() {
 
 	// Function to handle creating/updating a task
 	const handleTaskSubmit = async (taskData: Partial<Task>) => {
+		if (isSubmitting) return; // Prevent double submission
+
+		setIsSubmitting(true);
 		try {
-			if (editingTask) {
+			if (editingTask && editingTask.id) {
 				// Update existing task
 				const response = await fetch(`/api/tasks/${editingTask.id}`, {
 					method: 'PUT',
@@ -93,7 +97,10 @@ export default function HomePage() {
 				});
 
 				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
+					const errorData = await response.json();
+					throw new Error(
+						errorData.error || `HTTP error! status: ${response.status}`
+					);
 				}
 			} else {
 				// Create new task
@@ -106,21 +113,29 @@ export default function HomePage() {
 				});
 
 				if (!response.ok) {
-					throw new Error(`HTTP error! status: ${response.status}`);
+					const errorData = await response.json();
+					throw new Error(
+						errorData.error || `HTTP error! status: ${response.status}`
+					);
 				}
 			}
 
+			// Close modal and reset state
 			setShowTaskForm(false);
 			setEditingTask(null);
-			fetchTasks(); // Refetch all tasks
+
+			// Refetch data
+			await Promise.all([fetchTasks(), fetchProjects()]);
 		} catch (e) {
 			console.error('Failed to save task:', e);
 			setError(e instanceof Error ? e.message : 'Unknown error occurred');
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
 	// Function to handle deleting a task
-	const handleDeleteTask = async (taskId: number) => {
+	const handleDeleteTask = async (taskId: string) => {
 		if (!confirm('Are you sure you want to delete this task?')) return;
 
 		try {
@@ -129,10 +144,14 @@ export default function HomePage() {
 			});
 
 			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				const errorData = await response.json();
+				throw new Error(
+					errorData.error || `HTTP error! status: ${response.status}`
+				);
 			}
 
-			fetchTasks(); // Refetch all tasks
+			// Refetch data
+			await Promise.all([fetchTasks(), fetchProjects()]);
 		} catch (e) {
 			console.error('Failed to delete task:', e);
 			setError(e instanceof Error ? e.message : 'Unknown error occurred');
@@ -140,7 +159,7 @@ export default function HomePage() {
 	};
 
 	// Function to handle toggling task completion
-	const handleToggleComplete = async (taskId: number, completed: boolean) => {
+	const handleToggleComplete = async (taskId: string, completed: boolean) => {
 		try {
 			const response = await fetch(`/api/tasks/${taskId}`, {
 				method: 'PUT',
@@ -151,10 +170,14 @@ export default function HomePage() {
 			});
 
 			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				const errorData = await response.json();
+				throw new Error(
+					errorData.error || `HTTP error! status: ${response.status}`
+				);
 			}
 
-			fetchTasks(); // Refetch all tasks
+			// Refetch data
+			await Promise.all([fetchTasks(), fetchProjects()]);
 		} catch (e) {
 			console.error('Failed to update task:', e);
 			setError(e instanceof Error ? e.message : 'Unknown error occurred');
@@ -171,18 +194,21 @@ export default function HomePage() {
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to create project');
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to create project');
 			}
 
-			const newProject = await response.json();
-			setProjects([...projects, newProject]);
+			// Refetch projects to get updated data with task counts
+			await fetchProjects();
 		} catch (error) {
 			console.error('Error creating project:', error);
-			setError('Failed to create project');
+			setError(
+				error instanceof Error ? error.message : 'Failed to create project'
+			);
 		}
 	};
 
-	const handleUpdateProject = async (projectId: number, name: string) => {
+	const handleUpdateProject = async (projectId: string, name: string) => {
 		try {
 			const response = await fetch(`/api/projects/${projectId}`, {
 				method: 'PUT',
@@ -191,55 +217,56 @@ export default function HomePage() {
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to update project');
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to update project');
 			}
 
-			const updatedProject = await response.json();
-			setProjects(
-				projects.map((p) => (p.id === projectId ? updatedProject : p))
-			);
+			// Refetch projects to get updated data
+			await fetchProjects();
 		} catch (error) {
 			console.error('Error updating project:', error);
-			setError('Failed to update project');
+			setError(
+				error instanceof Error ? error.message : 'Failed to update project'
+			);
 		}
 	};
 
 	const handleDeleteProject = async (
-		projectId: number,
-		handleTasks: 'delete' | 'unassign'
+		projectId: string,
+		deleteAssociatedTasks: boolean = false
 	) => {
 		try {
 			const response = await fetch(
-				`/api/projects/${projectId}?handleTasks=${handleTasks}`,
+				`/api/projects/${projectId}?deleteAssociatedTasks=${deleteAssociatedTasks}`,
 				{
 					method: 'DELETE',
 				}
 			);
 
 			if (!response.ok) {
-				throw new Error('Failed to delete project');
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Failed to delete project');
 			}
-
-			// Remove project from state
-			setProjects(projects.filter((p) => p.id !== projectId));
 
 			// If we were filtering by this project, reset to show all tasks
 			if (selectedProjectId === projectId) {
 				setSelectedProjectId(null);
 			}
 
-			// Refresh tasks to reflect any changes (deleted or unassigned tasks)
-			await fetchTasks();
+			// Refresh both tasks and projects
+			await Promise.all([fetchTasks(), fetchProjects()]);
 		} catch (error) {
 			console.error('Error deleting project:', error);
-			setError('Failed to delete project');
+			setError(
+				error instanceof Error ? error.message : 'Failed to delete project'
+			);
 		}
 	};
 
 	// Function to handle creating a subtask
 	const handleCreateSubtask = (parentTask: Task) => {
 		setEditingTask({
-			id: 0,
+			id: '',
 			title: '',
 			description: '',
 			dueDate: null,
@@ -252,6 +279,19 @@ export default function HomePage() {
 		setShowTaskForm(true);
 	};
 
+	// Function to handle editing a task
+	const handleEditTask = (task: Task) => {
+		setEditingTask(task);
+		setShowTaskForm(true);
+	};
+
+	// Function to close the task form
+	const handleCloseTaskForm = () => {
+		setShowTaskForm(false);
+		setEditingTask(null);
+		setError(null); // Clear any errors when closing
+	};
+
 	// Filter tasks based on selected project and organize by parent/child
 	const filteredTasks = tasks.filter(
 		(task) => selectedProjectId === null || task.projectId === selectedProjectId
@@ -260,7 +300,7 @@ export default function HomePage() {
 	const mainTasks = filteredTasks.filter((task) => !task.parentId);
 
 	// Helper function to get subtasks for a parent task
-	const getSubtasks = (parentId: number) => {
+	const getSubtasks = (parentId: string) => {
 		return filteredTasks.filter((task) => task.parentId === parentId);
 	};
 
@@ -428,10 +468,7 @@ export default function HomePage() {
 										task={task}
 										projects={projects}
 										subtasks={getSubtasks(task.id)}
-										onEdit={(task) => {
-											setEditingTask(task);
-											setShowTaskForm(true);
-										}}
+										onEdit={handleEditTask}
 										onDelete={handleDeleteTask}
 										onToggleComplete={handleToggleComplete}
 										onCreateSubtask={handleCreateSubtask}
@@ -450,10 +487,8 @@ export default function HomePage() {
 					projects={projects}
 					tasks={tasks}
 					onSubmit={handleTaskSubmit}
-					onCancel={() => {
-						setShowTaskForm(false);
-						setEditingTask(null);
-					}}
+					onCancel={handleCloseTaskForm}
+					isSubmitting={isSubmitting}
 				/>
 			)}
 		</div>

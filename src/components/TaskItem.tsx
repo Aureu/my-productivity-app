@@ -7,8 +7,8 @@ interface TaskItemProps {
 	isSubtask?: boolean;
 	subtasks?: Task[];
 	onEdit: (task: Task) => void;
-	onDelete: (taskId: number) => void;
-	onToggleComplete: (taskId: number, completed: boolean) => void;
+	onDelete: (taskId: string) => void;
+	onToggleComplete: (taskId: string, completed: boolean) => void;
 	onCreateSubtask?: (parentTask: Task) => void;
 }
 
